@@ -90,7 +90,7 @@ NS_ASSUME_NONNULL_BEGIN
  are the query parameter keys, and the values are the associated values.
  In the event that there are multiple keys present, they will be combined into
  a comma-seperated list string.
- @remark The values will be URL-decoded before being set in the JSON dictionary
+ @remark The values will be URL-decoded before being set in the JSON dictionary, except parameter "r"
  @param components URL components to generate the JSON
  @returns A JSON dictionary
  */
@@ -106,15 +106,23 @@ NS_ASSUME_NONNULL_BEGIN
     // the JSON dictionary.
     for (NSURLQueryItem * queryItem in components.queryItems) {
         NSString * key = queryItem.name;
-        NSString * decodedValue = [queryItem.value stringByRemovingPercentEncoding];
-        decodedValue = decodedValue != nil ? decodedValue : @"";
+        NSString * value;
+        if ([key isEqualToString:@"r"]) {
+            // Parameter "r" indicates a landing page url that is clicked by user.
+            // It is appended by MPAdWebViewAgent#interceptURL.
+            // We *should not* decode it, because it may have URL-encoded parameter(s).
+            value = queryItem.value;
+        } else {
+            NSString * decodedValue = [queryItem.value stringByRemovingPercentEncoding];
+            value = decodedValue != nil ? decodedValue : @"";
+        }
 
         if ([json objectForKey:key] != nil) {
-            json[key] = [@[json[key], decodedValue] componentsJoinedByString:@","];
+            json[key] = [@[json[key], value] componentsJoinedByString:@","];
         }
         // Key doesn't exist; add it.
         else {
-            json[key] = decodedValue;
+            json[key] = value;
         }
     }
 
